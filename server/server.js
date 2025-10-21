@@ -12,9 +12,9 @@ import { stripeWebhooks } from './controllers/weebhooks.js';
 await connectDB();
 
 // Stripe Webhooks
-app.post('/api/stripe',express.raw({ type: 'application/json' }), stripeWebhooks)
 
 const app = express();
+app.post('/api/stripe',express.raw({ type: 'application/json' }), stripeWebhooks)
 
 // Middlewares
 app.use(cors());
