@@ -5,12 +5,13 @@ import { useEffect } from 'react'
 import { assets } from '../assets/assets'
 import Message from './Message'
 import { useRef } from 'react'
+import toast from 'react-hot-toast'
 
 const ChatBox = () => {
 
   const containerRef = useRef(null)
 
-  const { selectedChat, theme } = useAppContext()
+  const { selectedChat, theme, user, axios, token, setuser } = useAppContext()
   const [messages, setmessages] = useState([])
   const [loading, setloading] = useState(false)
   const [prompt, setprompt] = useState('')
@@ -19,8 +20,37 @@ const ChatBox = () => {
 
 
   const onSubmit = async (e) => {
-    e.preventDefault()
+    try {
 
+      e.preventDefault()
+      if (!user) {
+        return toast('Login to send messages')
+      }
+      setloading(true)
+      const promptCopy = prompt
+      setprompt('')
+      setmessages(prev => [...prev, { role: 'user', content: prompt, timestamp: Date.now(), isImage: false }])
+
+      const { data } = await axios.post(`/api/message/${mode}`, { chatId: selectedChat._id, prompt, isPublished }, { headers: { Authorization: token } })
+
+      if (data.success) {
+        setmessages(prev => [...prev, data.reply])
+        // decrease the credits
+        if (mode === 'image') {
+          setuser(prev => ({ ...prev, credits: prev.credits - 2 }))
+        } else {
+          setuser(prev => ({ ...prev, credits: prev.credits - 1 }))
+        }
+      } else {
+        toast.error(data.message)
+        setprompt(promptCopy)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setprompt('')
+      setloading(false)
+    }
   }
 
   useEffect(() => {
@@ -29,14 +59,14 @@ const ChatBox = () => {
     }
   }, [selectedChat])
 
-useEffect(() => {
-  if (containerRef.current) {
-    containerRef.current.scrollTo({
-      top: containerRef.current.scrollHeight,
-      behavior: 'smooth',
-    })
-  }
-}, [messages])
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  }, [messages])
 
 
   return (
@@ -79,7 +109,7 @@ useEffect(() => {
           <option className='dark:bg-purple-900' value="text">Text</option>
           <option className='dark:bg-purple-900' value="image">Image</option>
         </select>
-        <input onChange={() => setprompt(e.target.value)} value={prompt} type="text" placeholder='Type your prompt here...' className='flex-1 w-full text-sm outline-none' required />
+        <input onChange={(e) => setprompt(e.target.value)} value={prompt} type="text" placeholder='Type your prompt here...' className='flex-1 w-full text-sm outline-none' required />
         <button disabled={loading}>
           <img src={loading ? assets.stop_icon : assets.send_icon} className='w-8 cursor-pointer' alt="" />
         </button>
